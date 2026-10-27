@@ -1,0 +1,16 @@
+[project]
+name = "t1-snake"
+version = "0.1.0"
+description = "T1 – un Snake procédural avec pygame-ce"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
