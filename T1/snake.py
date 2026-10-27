@@ -58,14 +58,19 @@ def main():
     pg.init()
     screen = pg.display.set_mode((400, 300))
     clock = pg.time.Clock()
-
-    while True:
+    running = True
+    
+    while running:
+        print('tour')
         # au plus 1 image par seconde
         clock.tick(1)
 
         # 1. les événements : il faut les lire, sinon la fenêtre ne répond pas
         for event in pg.event.get():
-            pass
+            if (event.type == pg.QUIT) or (event.type==pg.KEYDOWN and event.key==pg.K_q):
+                running=False
+            print(event)
+    
 
         # 2. l'état (rien pour l'instant)
 
@@ -73,7 +78,7 @@ def main():
         screen.fill((randint(0, 255), randint(0, 255), randint(0, 255)))
         # ... puis on l'envoie à l'écran, une seule fois par tour de boucle
         pg.display.update()
-
+    pg.quit()
 
 # Ce bloc ne s'exécute que si l'on lance ce fichier (uv run snake.py),
 # pas quand un autre fichier fait `import snake` (les tests, par ex.).
