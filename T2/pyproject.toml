@@ -1,0 +1,16 @@
+[project]
+name = "t2-boids"
+version = "0.1.0"
+description = "T2 – une nuée de boids en objets, avec arcade"
+requires-python = ">=3.12, <3.14"
+dependencies = ["arcade>=3.3.3"]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
