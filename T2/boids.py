@@ -7,20 +7,21 @@ Lancez-le avec :  uv run boids.py
 Testez-le avec :  uv run pytest
 """
 
-import math  # noqa: F401 (servira à l'étape 2)
-import random  # noqa: F401 (servira à l'étape 4)
+import math
+import random
 from pathlib import Path
 
 import arcade
 
-WIDTH, HEIGHT = 600, 600
+WIDTH, HEIGHT = 800, 800
 BACKGROUND = arcade.color.ALMOND
 
 # Les images, cherchées à côté de ce fichier, d'où qu'on le lance.
 HERE = Path(__file__).parent
 ARROW = HERE / "media" / "arrow.png"
 OBSTACLE = HERE / "media" / "obstacle.png"
-SKY = HERE / "media" / "sky.png"  # le décor (étape 9)
+SKY = HERE / "media" / "sky.png"
+YELLOWSTONE = HERE / "media" / "fond.jpg"  # le décor (étape 9)
 
 SPEED = 100  # pixels par seconde (étape 2)
 TURN_SPEED = 180  # degrés par seconde, tant qu'une flèche est enfoncée (étape 5)
@@ -47,7 +48,10 @@ class Boid(arcade.Sprite):
         super().__init__(ARROW, center_x=x, center_y=y, angle=angle)
         self.speed = speed
         self.turning = 0
-        self.others = others
+        if others is None:
+            self.others = []
+        else:
+            self.others = others
     
     def update(self, delta_time=1 / 60, *args, **kwargs):
         """Appelée par arcade (via la SpriteList) à chaque mise à jour."""
@@ -55,7 +59,7 @@ class Boid(arcade.Sprite):
         rad= math.radians(self.angle)
         dx,dy = self.separation(self.others, RADIUS)    
         self.center_x += self.speed*delta_time * math.cos(rad) + dx
-        self.center_y -= self.speed*delta_time * math.sin(rad) + dy
+        self.center_y -= self.speed*delta_time * math.sin(rad) - dy
         self.center_x %= WIDTH
         self.center_y %= HEIGHT
         voisins = self.neighbours(self.others, RADIUS)
@@ -69,21 +73,21 @@ class Boid(arcade.Sprite):
 
     def neighbours(self, others, radius=RADIUS):
         """Les objets de `others` à moins de `radius` pixels, sauf soi-même."""
-        L= arcade.SpriteList()
+        L= []
         for elmt in others:
-            if elmt is not self:
-                if math.dist(self.position, elmt.position)<radius:
+            if elmt is not self and math.dist(self.position, elmt.position)<radius:
                     L.append(elmt)
         return L
             
 
     def separation(self, others, radius=RADIUS):
         """Le déplacement (dx, dy) qui écarte le boid de ses voisins."""
-        voisins = self.neighbours(others)
+        voisins = self.neighbours(others, radius)
         dx,dy = 0,0
         for vois in voisins:
-            dx += (vois.center_x - self.center_x)* 0.5 * (1 - math.dist(self.position, vois.position)/radius)
-            dy += (vois.center_y - self.center_y)* 0.5 * (1 - math.dist(self.position, vois.position)/radius)
+            d = math.dist(self.position, vois.position)
+            dx += (self.center_x - vois.center_x)* 0.5 * (1 - d/radius)
+            dy += (self.center_y - vois.center_y)* 0.5 * (1 - d/radius)
         return (dx,dy)
 
 
@@ -94,41 +98,47 @@ class Obstacle(arcade.Sprite):
         super().__init__(OBSTACLE,center_x=x, center_y = y)
 
 
-def random_boids(L, n, others=None):
+def random_boids(n, others=None):
     """n boids placés et orientés au hasard, qui évitent tous `others`."""
+    L = arcade.SpriteList()
     for i in range(n):
-        x, y, angle = random.uniform(0,WIDTH), random.uniform(0,HEIGHT), random.uniform(-180,180)
+        x, y, angle = random.uniform(0,WIDTH), random.uniform(0,HEIGHT), random.uniform(0,360)
         boid=Boid(x,y,angle)
         L.append(boid)
+    return L
 
-def obstacle_grid(L,n):
+def obstacle_grid(n):
     """n × n obstacles régulièrement espacés, au centre de leur carré."""
+    L= arcade.SpriteList()
     for i in range(n):
         for j in range(n):
-            L.append(Obstacle(60 + i*80, 60+ j*80))
+            L.append(Obstacle((i + 0.5)*WIDTH / n, (j+0.5)*HEIGHT / n))
+    return L
 
 
 # --- la fenêtre ---------------------------------------------------------------
 
 
 class MyWindow(arcade.Window):
-    def __init__(self, N=20):
+    def __init__(self, N=40):
         # d'abord, ce que fait toute fenêtre d'arcade : s'ouvrir, en WIDTH × HEIGHT
         # pixels, avec « Boids » pour titre (super() : on y revient en séance)
         super().__init__(WIDTH, HEIGHT, "Boids")
         self.background_color = BACKGROUND  # la couleur que self.clear() étale
-        self.obsts = arcade.SpriteList()
-        obstacle_grid(self.obsts, 8)
+
+        self.sky = arcade.SpriteList()
+        fond = arcade.Sprite(YELLOWSTONE, center_x=WIDTH/2, center_y=HEIGHT/2)
+        fond.alpha=160
+        self.sky.append(fond)
+
+        self.obsts = obstacle_grid(10)
         # pour l'instant, un simple Sprite : une image posée en (100, 100),
         # comptés depuis le coin en bas à 
-        self.boids = arcade.SpriteList()
-        random_boids(self.boids, N)
+        self.boids = random_boids(N)
         print(type(self.boids), type(self.obsts))
         A_eviter = arcade.SpriteList()
-        for elmt in self.boids:
-            A_eviter.append(elmt)
-        for elmt in self.obsts:
-            A_eviter.append(elmt)
+        A_eviter.extend(self.boids)
+        A_eviter.extend(self.obsts)
         for elmt in self.boids:
             elmt.others = A_eviter
         
@@ -154,6 +164,7 @@ class MyWindow(arcade.Window):
         self.boids.update(delta_time)
     def on_draw(self):
         self.clear()
+        self.sky.draw()
         self.obsts.draw()
         self.boids.draw()
 
